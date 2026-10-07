@@ -8,9 +8,12 @@
     "ios": "expo start --ios"
   },
   "dependencies": {
+    "bip39": "^3.1.0",
     "expo": "~52.0.0",
     "react": "18.3.1",
-    "react-native": "0.76.0"
+    "react-native": "0.76.0",
+    "react-native-get-random-values": "~1.11.0",
+    "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
