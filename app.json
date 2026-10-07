@@ -10,7 +10,16 @@
     "ios": { "supportsTablet": true },
     "android": {
       "package": "com.freefreaky210.cryptocompanion",
-      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT", "ACCESS_FINE_LOCATION"]
-    }
+      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT", "ACCESS_FINE_LOCATION", "RECORD_AUDIO"]
+    },
+    "plugins": [
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Crypto Companion to use the microphone for voice input.",
+          "speechRecognitionPermission": "Allow Crypto Companion to recognize speech for voice input."
+        }
+      ]
+    ]
   }
 }
