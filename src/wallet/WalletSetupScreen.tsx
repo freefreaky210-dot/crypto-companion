@@ -5,7 +5,7 @@ import { saveSeed, loadSeed, wipeSeed } from './keyStore';
 import { deriveAddresses, DerivedAddresses } from '../chains/derive';
 
 // M1: Wallet create/import + secure storage + address derivation.
-// Keys generated/stored on-device only (SPEC §5). BTC uses TESTNET until M5 audit.
+// Keys generated/stored on-device only (SPEC §5). MAINNET — real funds at risk.
 type Step = 'loading' | 'choice' | 'showSeed' | 'confirmQuiz' | 'import' | 'done';
 
 export default function WalletSetupScreen() {
@@ -16,7 +16,6 @@ export default function WalletSetupScreen() {
   const [quizWord, setQuizWord] = useState('');
   const [quizIndex, setQuizIndex] = useState(0);
 
-  // On open: if a wallet already exists in secure storage, load it straight to 'done'.
   useEffect(() => {
     (async () => {
       const existing = await loadSeed();
@@ -43,7 +42,7 @@ export default function WalletSetupScreen() {
   };
 
   const finishSetup = async (m: string) => {
-    await saveSeed(m); // encrypted by OS keystore, this device only
+    await saveSeed(m);
     setAddresses(await deriveAddresses(m));
     setStep('done');
   };
@@ -88,7 +87,7 @@ export default function WalletSetupScreen() {
         <>
           <Btn label="Create new wallet" onPress={createWallet} primary />
           <Btn label="Import existing wallet" onPress={() => setStep('import')} />
-          <Text style={styles.hint}>Keys are generated and stored on this device only.</Text>
+          <Text style={styles.hint}>Keys are generated and stored on this device only. MAINNET: real funds — keep your written backup safe.</Text>
         </>
       )}
 
@@ -125,11 +124,11 @@ export default function WalletSetupScreen() {
 
       {step === 'done' && addresses && (
         <>
-          <Text style={styles.success}>✅ Wallet ready — seed stored in secure enclave</Text>
+          <Text style={styles.success}>✅ Wallet ready — MAINNET addresses</Text>
           <View style={styles.addrCard}>
-            <Text style={styles.addrLabel}>BTC (testnet)</Text>
+            <Text style={styles.addrLabel}>BTC (Bitcoin mainnet)</Text>
             <Text style={styles.addr} selectable>{addresses.btc}</Text>
-            <Text style={styles.addrLabel}>ETH (Sepolia)</Text>
+            <Text style={styles.addrLabel}>ETH (Ethereum mainnet)</Text>
             <Text style={styles.addr} selectable>{addresses.eth}</Text>
           </View>
           <Btn label="Erase wallet from device" onPress={resetWallet} />
