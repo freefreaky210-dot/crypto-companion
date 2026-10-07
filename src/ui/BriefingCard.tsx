@@ -1,32 +1,46 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import * as Location from 'expo-location';
 
 type Prices = { btc: number | null; eth: number | null };
+type Weather = { tempC: number; code: number } | null;
 
-// M4 target: time, local weather, prices, balance change.
-// Prices are LIVE via CoinGecko (no API key needed). Weather still pending.
+// M4: time + live weather (open-meteo, no API key) + live prices (CoinGecko).
+const WMO: Record<number, string> = {
+  0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast',
+  45: 'Fog', 51: 'Drizzle', 61: 'Rain', 71: 'Snow', 80: 'Showers', 95: 'Thunderstorm',
+};
+
 export default function BriefingCard() {
   const [prices, setPrices] = useState<Prices>({ btc: null, eth: null });
+  const [weather, setWeather] = useState<Weather>(null);
   const [error, setError] = useState(false);
   const [updated, setUpdated] = useState<Date | null>(null);
 
-  const load = async () => {
-    try {
-      const res = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd'
-      );
-      const json = await res.json();
-      setPrices({ btc: json.bitcoin.usd, eth: json.ethereum.usd });
-      setUpdated(new Date());
-      setError(false);
-    } catch {
-      setError(true); // offline: keep last values (see SPEC 9.4)
-    }
+  const loadPrices = async () => {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd');
+    const json = await res.json();
+    setPrices({ btc: json.bitcoin.usd, eth: json.ethereum.usd });
+    setUpdated(new Date());
+    setError(false);
+  };
+
+  const loadWeather = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+    const loc = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = loc.coords;
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`
+    );
+    const j = await res.json();
+    setWeather({ tempC: j.current.temperature_2m, code: j.current.weather_code });
   };
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 60_000); // refresh every minute
+    loadPrices().catch(() => setError(true));
+    loadWeather().catch(() => {});
+    const t = setInterval(() => loadPrices().catch(() => setError(true)), 60_000);
     return () => clearInterval(t);
   }, []);
 
@@ -37,12 +51,12 @@ export default function BriefingCard() {
     <View style={styles.card}>
       <Text style={styles.heading}>Daily Briefing</Text>
       <Text style={styles.line}>🕐 {new Date().toLocaleTimeString()}</Text>
-      <Text style={styles.line}>🌤 Weather: — (API pending, M4)</Text>
+      <Text style={styles.line}>
+        🌤 {weather ? `${WMO[weather.code] ?? 'Weather'} · ${weather.tempC}°C` : 'Weather: enable location'}
+      </Text>
       <Text style={styles.line}>₿ BTC: {fmt(prices.btc)}   Ξ ETH: {fmt(prices.eth)}</Text>
       {error && <Text style={styles.warn}>Offline — showing last known prices</Text>}
-      {updated && !error && (
-        <Text style={styles.updated}>Updated {updated.toLocaleTimeString()}</Text>
-      )}
+      {updated && !error && <Text style={styles.updated}>Updated {updated.toLocaleTimeString()}</Text>}
     </View>
   );
 }
