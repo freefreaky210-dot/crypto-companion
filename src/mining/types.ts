@@ -1,11 +1,12 @@
-// Mining module types (rig monitoring/control — Phase: mining integration)
+// Mining module types (rig monitoring/control)
 export type RigStatus = 'MINING' | 'OFFLINE' | 'ERROR' | 'UNKNOWN';
+export type PoolId = 'nicehash' | 'braiins' | 'f2pool';
 
 export type Rig = {
   id: string;
   name: string;
   status: RigStatus;
-  hashrateHs: number; // hashes per second
+  hashrateHs: number;
   temperatureC?: number;
   powerW?: number;
 };
@@ -17,11 +18,13 @@ export type MiningStats = {
   totalRigs: number;
   unpaidBtc: number;
   rigs: Rig[];
-  fetchedAt: string; // ISO time (offline transparency, SPEC 9.4)
+  fetchedAt: string;
 };
 
 export type PoolCredentials = {
+  pool: PoolId;
   apiKey: string;
-  apiSecret: string;
-  orgId: string;
+  apiSecret?: string; // NiceHash only
+  orgId?: string;     // NiceHash only
+  currency?: string;  // F2Pool currency slug, e.g. 'bitcoin'
 };

@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { PoolCredentials } from './types';
 
 // Pool API credentials stored in the OS keystore, device-only (SPEC §5).
-const KEY = 'cc_pool_nicehash_v1';
+const KEY = 'cc_pool_creds_v2';
 
 export async function savePoolCreds(creds: PoolCredentials): Promise<void> {
   await SecureStore.setItemAsync(KEY, JSON.stringify(creds), {
