@@ -3,8 +3,9 @@ import { ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert 
 import * as bip39 from 'bip39';
 import { saveSeed, loadSeed, wipeSeed } from './keyStore';
 import { deriveAddresses, DerivedAddresses } from '../chains/derive';
+import ReceiveQr from '../ui/ReceiveQr';
 
-// M1: Wallet create/import + secure storage + address derivation.
+// M1: Wallet create/import + secure storage + address derivation + receive QRs.
 // Keys generated/stored on-device only (SPEC §5). MAINNET — real funds at risk.
 type Step = 'loading' | 'choice' | 'showSeed' | 'confirmQuiz' | 'import' | 'done';
 
@@ -124,13 +125,9 @@ export default function WalletSetupScreen() {
 
       {step === 'done' && addresses && (
         <>
-          <Text style={styles.success}>✅ Wallet ready — MAINNET addresses</Text>
-          <View style={styles.addrCard}>
-            <Text style={styles.addrLabel}>BTC (Bitcoin mainnet)</Text>
-            <Text style={styles.addr} selectable>{addresses.btc}</Text>
-            <Text style={styles.addrLabel}>ETH (Ethereum mainnet)</Text>
-            <Text style={styles.addr} selectable>{addresses.eth}</Text>
-          </View>
+          <Text style={styles.success}>✅ Wallet ready — MAINNET</Text>
+          <ReceiveQr label="BTC (Bitcoin mainnet)" address={addresses.btc} />
+          <ReceiveQr label="ETH (Ethereum mainnet)" address={addresses.eth} />
           <Btn label="Erase wallet from device" onPress={resetWallet} />
         </>
       )}
@@ -161,8 +158,5 @@ const styles = StyleSheet.create({
   label: { color: '#c3cad9', fontSize: 14, marginBottom: 8 },
   input: { backgroundColor: '#1c2333', color: '#f5f7fa', borderRadius: 10, padding: 12, marginBottom: 12 },
   multi: { minHeight: 90, textAlignVertical: 'top' },
-  success: { color: '#4bbf6b', fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  addrCard: { backgroundColor: '#141a2a', borderRadius: 12, padding: 14, marginBottom: 12 },
-  addrLabel: { color: '#f7931a', fontSize: 12, fontWeight: '700', marginTop: 8 },
-  addr: { color: '#f5f7fa', fontSize: 13, marginTop: 4 },
+  success: { color: '#4bbf6b', fontSize: 18, fontWeight: '700', marginBottom: 4 },
 });
