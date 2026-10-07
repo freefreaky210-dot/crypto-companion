@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import * as bip39 from 'bip39';
+import { saveSeed, loadSeed, wipeSeed } from './keyStore';
+import { deriveAddresses, DerivedAddresses } from '../chains/derive';
 
-// M1: Wallet create/import.
-// Generates a REAL BIP39 mnemonic on-device. Keys never leave the phone (SPEC §5).
-// TODO (M1 follow-ups): secure-enclave storage, backup quiz gate, BIP44 address derivation.
-type Step = 'choice' | 'showSeed' | 'confirmQuiz' | 'import' | 'done';
+// M1: Wallet create/import + secure storage + address derivation.
+// Keys generated/stored on-device only (SPEC §5). BTC uses TESTNET until M5 audit.
+type Step = 'loading' | 'choice' | 'showSeed' | 'confirmQuiz' | 'import' | 'done';
 
 export default function WalletSetupScreen() {
-  const [step, setStep] = useState<Step>('choice');
+  const [step, setStep] = useState<Step>('loading');
   const [mnemonic, setMnemonic] = useState('');
+  const [addresses, setAddresses] = useState<DerivedAddresses | null>(null);
   const [importText, setImportText] = useState('');
   const [quizWord, setQuizWord] = useState('');
   const [quizIndex, setQuizIndex] = useState(0);
 
+  // On open: if a wallet already exists in secure storage, load it straight to 'done'.
+  useEffect(() => {
+    (async () => {
+      const existing = await loadSeed();
+      if (existing) {
+        setMnemonic(existing);
+        setAddresses(await deriveAddresses(existing));
+        setStep('done');
+      } else {
+        setStep('choice');
+      }
+    })();
+  }, []);
+
   const createWallet = () => {
-    const m = bip39.generateMnemonic(); // 12 words, 128-bit entropy
-    setMnemonic(m);
+    setMnemonic(bip39.generateMnemonic());
     setStep('showSeed');
   };
 
@@ -27,10 +42,15 @@ export default function WalletSetupScreen() {
     setStep('confirmQuiz');
   };
 
+  const finishSetup = async (m: string) => {
+    await saveSeed(m); // encrypted by OS keystore, this device only
+    setAddresses(await deriveAddresses(m));
+    setStep('done');
+  };
+
   const checkQuiz = () => {
-    const words = mnemonic.split(' ');
-    if (quizWord.trim().toLowerCase() === words[quizIndex]) {
-      setStep('done');
+    if (quizWord.trim().toLowerCase() === mnemonic.split(' ')[quizIndex]) {
+      finishSetup(mnemonic);
     } else {
       Alert.alert('Wrong word', 'Check your written backup and try again. You cannot skip this.');
     }
@@ -43,12 +63,26 @@ export default function WalletSetupScreen() {
       return;
     }
     setMnemonic(m);
-    setStep('done');
+    finishSetup(m);
+  };
+
+  const resetWallet = () => {
+    Alert.alert('Erase wallet?', 'This deletes the seed from this device. Only proceed if you have your written backup.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Erase', style: 'destructive', onPress: async () => {
+        await wipeSeed();
+        setMnemonic('');
+        setAddresses(null);
+        setStep('choice');
+      }},
+    ]);
   };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Wallet Setup</Text>
+      <Text style={styles.title}>Wallet</Text>
+
+      {step === 'loading' && <Text style={styles.hint}>Loading…</Text>}
 
       {step === 'choice' && (
         <>
@@ -60,7 +94,7 @@ export default function WalletSetupScreen() {
 
       {step === 'showSeed' && (
         <>
-          <Text style={styles.warn}>WRITE THESE 12 WORDS DOWN. Never screenshot or share them. Anyone with these words can take your funds.</Text>
+          <Text style={styles.warn}>WRITE THESE 12 WORDS DOWN. Never screenshot or share them.</Text>
           <View style={styles.seedBox}>
             {mnemonic.split(' ').map((w, i) => (
               <Text key={i} style={styles.word}>{i + 1}. {w}</Text>
@@ -89,10 +123,16 @@ export default function WalletSetupScreen() {
         </>
       )}
 
-      {step === 'done' && (
+      {step === 'done' && addresses && (
         <>
-          <Text style={styles.success}>✅ Wallet ready</Text>
-          <Text style={styles.hint}>Address derivation (BIP44 for BTC + ETH) and secure-enclave storage land in the next M1 update. For now, your seed exists only in memory on this device.</Text>
+          <Text style={styles.success}>✅ Wallet ready — seed stored in secure enclave</Text>
+          <View style={styles.addrCard}>
+            <Text style={styles.addrLabel}>BTC (testnet)</Text>
+            <Text style={styles.addr} selectable>{addresses.btc}</Text>
+            <Text style={styles.addrLabel}>ETH (Sepolia)</Text>
+            <Text style={styles.addr} selectable>{addresses.eth}</Text>
+          </View>
+          <Btn label="Erase wallet from device" onPress={resetWallet} />
         </>
       )}
     </ScrollView>
@@ -122,5 +162,8 @@ const styles = StyleSheet.create({
   label: { color: '#c3cad9', fontSize: 14, marginBottom: 8 },
   input: { backgroundColor: '#1c2333', color: '#f5f7fa', borderRadius: 10, padding: 12, marginBottom: 12 },
   multi: { minHeight: 90, textAlignVertical: 'top' },
-  success: { color: '#4bbf6b', fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  success: { color: '#4bbf6b', fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  addrCard: { backgroundColor: '#141a2a', borderRadius: 12, padding: 14, marginBottom: 12 },
+  addrLabel: { color: '#f7931a', fontSize: 12, fontWeight: '700', marginTop: 8 },
+  addr: { color: '#f5f7fa', fontSize: 13, marginTop: 4 },
 });
