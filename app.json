@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Crypto Companion",
+    "slug": "crypto-companion",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "cryptocompanion",
+    "userInterfaceStyle": "dark",
+    "splash": { "backgroundColor": "#0b0e17" },
+    "ios": { "supportsTablet": true },
+    "android": {}
+  }
+}
